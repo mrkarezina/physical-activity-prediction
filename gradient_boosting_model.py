@@ -1,10 +1,3 @@
-"""
-    Author: Marko Arezina
-    Email: mrk.arezina@gmail.com
-    Date created: 10/24/2018
-"""
-
-import numpy as np
 import pandas as pd
 import pickle
 
@@ -24,6 +17,8 @@ exclude_subject = "D"
 
 save_model = "xgmodel.pickle.dat"
 save_prediction = "prediction_d.csv"
+
+combined_biometric_data = "combined_biometric.csv"
 
 activities = [
     {
@@ -153,8 +148,7 @@ def predict_activity(my_model, X_test, Y_test):
     cleaned.to_csv(save_prediction)
 
 
-data = pd.read_csv(
-    "/Users/mnarezina/PycharmProjects/tensorflow_samples/learning_projects/PhysicalActivity/combined_biometric.csv")
+data = pd.read_csv(combined_biometric_data)
 data = data.query("Activity.notnull()")
 
 # Data with all subjects

@@ -1,13 +1,10 @@
-"""
-    Author: Marko Arezina
-    Email: mrk.arezina@gmail.com
-    Date created: 10/23/2018
-"""
-
 import pandas as pd
 import datetime
 
 import os
+
+cleaned_data_dir = "/Cleaned"
+combined_data_csv = "combined_biometric.csv"
 
 
 def combine_csv(base_dir):
@@ -30,7 +27,7 @@ def combine_csv(base_dir):
             combined = combined.append(new, ignore_index=True)
 
     combined = combined.drop("Unnamed: 0", axis=1)
-    combined.to_csv('combined_biometric.csv', sep=',', encoding='utf-8')
+    combined.to_csv(combined_data_csv, sep=',', encoding='utf-8')
 
 
 def create_series(data):
@@ -76,7 +73,7 @@ def create_series(data):
     cleaned.to_csv('series_bio.csv', sep=',', encoding='utf-8')
 
 
-combine_csv("/Users/marezina/PycharmProjects/ActivityBioSpy2018/Cleaned")
+combine_csv(cleaned_data_dir)
 
-data = pd.read_csv("/Users/marezina/PycharmProjects/ActivityBioSpy2018/combined_biometric.csv")
+data = pd.read_csv()
 create_series(data)

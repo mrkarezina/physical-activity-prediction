@@ -1,9 +1,3 @@
-"""
-    Author: Marko Arezina
-    Email: mrk.arezina@gmail.com
-    Date created: 10/23/2018
-"""
-
 import os
 import pandas as pd
 from dateutil import parser
@@ -11,8 +5,8 @@ import datetime
 
 from cachetools.func import lru_cache
 
-activities_meta_file = "/Users/mrezina/PycharmProjects/ActivityBioSpy2018/Meta_data_activities.csv"
-data_base_file = "/Users/mrezina/PycharmProjects/ActivityBioSpy2018/venv/Bio-Monitor/Bio-M-Challenge-Data"
+activities_meta_file = "Meta_data_activities.csv"
+data_base_file = "/Bio-Monitor/Bio-M-Challenge-Data"
 
 
 @lru_cache(maxsize=2000)
