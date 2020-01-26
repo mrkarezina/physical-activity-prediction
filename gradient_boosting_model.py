@@ -8,19 +8,25 @@ from sklearn.metrics import accuracy_score
 from xgboost import XGBClassifier
 
 # If not labels match
-default_label = 0
+default_label = -1
+test_size = 0.4
+train_model = True
 
-train_model = False
+# Which subject to exclude from training. Subject will be used and test on.
+test_subject = "D"
 
-# Which subject to exlude from train, and test on
-exclude_subject = "D"
+save_model = "xgb_model.pickle"
+save_prediction = "predictions.csv"
+combined_biometric_data = "preprocessed_biometric.csv"
 
-save_model = "xgmodel.pickle.dat"
-save_prediction = "prediction_d.csv"
-
-combined_biometric_data = "combined_biometric.csv"
+selected_features = ["heart_rate", "tidal_volume_adjusted", "step", "temperature_celcius",
+                     "systolic_pressure_adjusted", "minute_ventilation_adjusted"]
 
 activities = [
+    {
+        "substring": ["drive"],
+        "numerical": 0
+    },
     {
         "substring": ["walk"],
         "numerical": 1
@@ -70,7 +76,7 @@ def check_activities(activity):
 
 def label_data(data):
     """
-    Used to label the activites, by substring matching
+    Used to label the raw text activities, by matching substrings
     :param data:
     :return:
     """
@@ -100,15 +106,14 @@ def drop_data(data_frame):
     return data
 
 
-def prepare_arrays(data_frame, test_size=0.3):
+def prepare_arrays(data_frame, test_size=0.4):
     """
     Creates nd arrays of data with numerical labels
     :param data_frame:
     :return:
     """
 
-    x = data_frame[["heart_rate", "tidal_volume_adjusted", "cadence", "step", "activity", "temperature_celcius",
-                    "systolic_pressure_adjusted", "minute_ventilation_adjusted"]]
+    x = data_frame[selected_features]
 
     y = pd.to_numeric(data_frame['Activity'], errors='coerce').astype(float)
 
@@ -124,6 +129,10 @@ def prepare_arrays(data_frame, test_size=0.3):
     return X_train, X_test, Y_train, Y_test
 
 
+def evaluation(predicted, expected):
+    print("Accuracy Score: {0}".format(accuracy_score(predicted, expected)))
+
+
 def predict_activity(my_model, X_test, Y_test):
     """
     Use model to make prediction and save
@@ -133,11 +142,9 @@ def predict_activity(my_model, X_test, Y_test):
     :return:
     """
 
-    print("Testing")
     predictions = my_model.predict(X_test)
 
-    print("Accuracy Score: {0}".format(accuracy_score(predictions, Y_test)))
-    print("Variance: {0}".format(explained_variance_score(predictions, Y_test)))
+    evaluation(predictions, Y_test)
 
     pred = ["Prediction", "Truth", "Heart Rate"]
     cleaned = pd.DataFrame(columns=pred)
@@ -155,26 +162,27 @@ data = data.query("Activity.notnull()")
 all_subject_data = label_data(data)
 
 # Dont include default category
-all_subject_data = all_subject_data.query("Activity != 0")
+all_subject_data = all_subject_data.query(f"Activity != {default_label}")
 
 # Exlude a subject
-excluded_subject = all_subject_data.query("subject != \"D\"")
+# TODO: eval error should be on exluded subject
+excluded_subject = all_subject_data.query(f"subject != \"{test_subject}\"")
 # exlude_subject = all_subject_data.copy()
 
-X_train, X_test, Y_train, Y_test = prepare_arrays(excluded_subject)
+X_train, X_test, Y_train, Y_test = prepare_arrays(excluded_subject, test_size=test_size)
 
 if train_model:
     eval_set = [(X_test, Y_test)]
     my_model = XGBClassifier(n_estimators=500, learning_rate=0.05, verbose=True)
 
-    print("Training")
+    print("Training ...")
     # X_train = list(X_train)
     # Y_train = list(Y_train)
     # two = zip(X_train, Y_train)
     # for t in two:
     #     print(t)
 
-    my_model.fit(X_train, Y_train, verbose=True, eval_set=eval_set)
+    my_model.fit(X_train, Y_train, verbose=True, eval_set=eval_set, eval_metric="merror")
     results = my_model.evals_result()
     print(results)
 
@@ -182,25 +190,29 @@ if train_model:
 else:
     my_model = pickle.load(open(save_model, "rb"))
 
+print("Feature importance:")
+for fet in zip(selected_features, my_model.feature_importances_):
+    print(f"{fet[0]}: {fet[1]}")
+
+print("Testing on all subjects")
 predict_activity(my_model, X_test, Y_test)
 
 """
 Testing for particular subject
 """
-print("Testing select: ")
-qeury = "subject == \"{0}\"".format(exclude_subject)
+print("-" * 20 + '\n', f"Performance on test subject {test_subject}:")
+qeury = f"subject == \"{test_subject}\""
 data = all_subject_data.query(qeury)
-print("Subject test {0}".format(data.shape[0]))
-
 data = drop_data(data)
 
-X_train, X_test, Y_train, Y_test = prepare_arrays(data, test_size=0.3)
+print("Number of test samples {0}".format(data.shape[0]))
+
+X_train, X_test, Y_train, Y_test = prepare_arrays(data, test_size=test_size)
 predictions = my_model.predict(X_test)
 
-print("Accuracy Score: {0}".format(accuracy_score(predictions, Y_test)))
-print("Variance: {0}".format(explained_variance_score(predictions, Y_test)))
+evaluation(predictions, Y_test)
 
-pred = ["Prediction", "Truth", "Heart Rate"]
+pred = ["Prediction", "Actual", "Heart Rate"]
 cleaned = pd.DataFrame(columns=pred)
 cleaned["Prediction"] = list(predictions)
 cleaned["Truth"] = list(Y_test)
